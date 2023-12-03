@@ -61,4 +61,42 @@ contract SLATicketSystemTest is Test {
         assertTrue(isValidated);
     }
 
+    function testAutomatedPayout() public {
+        // Set up a buyer and submit a ticket
+        vm.startPrank(buyer);
+        ticketSystem.submitTicket(1, "Issue Description", 1, false);
+        vm.stopPrank();
+
+        // Get buyer's balance before payout
+        uint256 initialBuyerBalance = creditsToken.balanceOf(buyer);
+
+        // Validate the ticket as a seller, triggering an automated payout
+        vm.startPrank(seller);
+        ticketSystem.validateTicket(0, "Resolved");
+        vm.stopPrank();
+
+        // Get buyer's balance after payout
+        uint256 newBuyerBalance = creditsToken.balanceOf(buyer);
+
+        // Calculate the expected payout amount based on your contract logic
+        uint256 expectedPayout = calculateExpectedPayout(1, 1, false); // Adjust parameters as per your test setup
+
+        // The buyer's balance should have increased by the expected payout amount
+        assertEq(newBuyerBalance, initialBuyerBalance + expectedPayout, "Buyer did not receive the correct payout amount");
+    }
+
+    // the calculateCreditAmount function in the SLATicketSystem contract is marked as internal
+    function calculateExpectedPayout(uint256 severity, uint256 timestamp, bool isPriorityCustomer) internal pure returns (uint256) {
+        uint256 baseCredit = 10;  // Base credit amount
+        uint256 severityFactor = severity * 5;  // Additional credits for severity
+        // Time factor calculation needs to be adapted based on your contract logic and test setup
+        uint256 delayPenalty = 0; // Assuming no delay in this test case
+
+        uint256 priorityBonus = isPriorityCustomer ? 10 : 0;
+
+        // Calculate total credit amount
+        uint256 totalCredit = baseCredit + severityFactor + priorityBonus - delayPenalty;
+
+        return totalCredit > 0 ? totalCredit : 0;  // Ensure credit is not negative
+    }
 }
