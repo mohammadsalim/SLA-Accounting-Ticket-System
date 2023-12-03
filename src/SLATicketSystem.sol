@@ -23,6 +23,8 @@ contract SLATicketSystem {
         bool isValidated;
         string sellerComments;
         uint256 validationTimestamp;
+        uint256 severity;  // Severity of the issue, e.g., 1 for low, 2 for medium, 3 for high
+        bool isPriorityCustomer;  // Indicates if the buyer is a priority customer
     }
 
     // Struct for performance metrics
@@ -81,7 +83,12 @@ contract SLATicketSystem {
     /////////////////////////////////////////////////////////////////////////
 
     // Function to submit a trouble ticket
-    function submitTicket(uint256 serviceIdentifier, string memory issueDescription) external {
+    function submitTicket(
+        uint256 serviceIdentifier,
+        string memory issueDescription,
+        uint256 severity,
+        bool isPriorityCustomer
+    ) external {
         require(accessControl.hasRole(accessControl.BUYER_ROLE(), msg.sender), "Not a buyer");
 
         uint256 ticketId = nextTicketId++;
@@ -92,7 +99,9 @@ contract SLATicketSystem {
             buyer: msg.sender,
             isValidated: false,
             sellerComments: "",
-            validationTimestamp: 0
+            validationTimestamp: 0,
+            severity: severity,
+            isPriorityCustomer: isPriorityCustomer
         });
 
         emit TicketSubmitted(ticketId, msg.sender);
@@ -144,9 +153,24 @@ contract SLATicketSystem {
 
     // Function to calculate credit amount
     function calculateCreditAmount(uint256 ticketId) internal view returns (uint256) {
-        // Logic to calculate the amount of credit for the ticket
-        return 50; // Placeholder value
+        TroubleTicket storage ticket = tickets[ticketId];
+
+        uint256 baseCredit = 10;  // Base credit amount
+        uint256 severityFactor = ticket.severity * 5;  // Additional credits for severity
+        uint256 timeFactor = (block.timestamp - ticket.timestamp) / 1 hours;  // Time factor in hours
+
+        // Reduce credits for delays (1 credit reduced per hour of delay)
+        uint256 delayPenalty = timeFactor > 24 ? (timeFactor - 24) : 0;
+
+        // Bonus credits for priority customers
+        uint256 priorityBonus = ticket.isPriorityCustomer ? 10 : 0;
+
+        // Calculate total credit amount
+        uint256 totalCredit = baseCredit + severityFactor + priorityBonus - delayPenalty;
+    
+        return totalCredit > 0 ? totalCredit : 0;  // Ensure credit is not negative
     }
+
 
     // Function for buyers to raise a dispute 
     function raiseDispute(uint256 ticketId) external {
