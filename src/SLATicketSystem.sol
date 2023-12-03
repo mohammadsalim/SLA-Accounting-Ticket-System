@@ -40,9 +40,8 @@ contract SLATicketSystem {
     // Mapping of disputes
     mapping(uint256 => bool) public disputes;
 
-    // Variables for performance metrics
-    uint256 public totalResolvedTickets;
-    uint256 public totalResolutionTime;
+    // Variable for performance metrics
+    PerformanceMetrics public metrics;
 
     /////////////////////////////////////////////////////////////////////////
     // Events
@@ -104,8 +103,8 @@ contract SLATicketSystem {
         automatedPayout(ticketId);
 
         // Update performance metrics
-        totalResolvedTickets++;
-        totalResolutionTime += (block.timestamp - tickets[ticketId].timestamp);
+        metrics.totalResolvedTickets++;
+        metrics.totalResolutionTime += (block.timestamp - tickets[ticketId].timestamp);
     }
 
     // Function for automated payout
@@ -142,6 +141,6 @@ contract SLATicketSystem {
 
     // Function to get average resolution time for performance metrics
     function getAverageResolutionTime() external view returns (uint256) {
-        return totalResolvedTickets == 0 ? 0 : totalResolutionTime / totalResolvedTickets;
+        return metrics.totalResolvedTickets == 0 ? 0 : metrics.totalResolutionTime / metrics.totalResolvedTickets;
     }
 }
