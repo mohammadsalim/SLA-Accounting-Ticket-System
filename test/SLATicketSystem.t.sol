@@ -6,6 +6,7 @@ import "../src/SLATicketSystem.sol";
 import "../src/SLAAccessControl.sol";
 import "../src/Credits/SLACreditsToken.sol";
 import "../src/SLAs/SLAContract.sol";
+import "../src/SLAUpgradeableProxy.sol";
 
 contract SLATicketSystemTest is Test {
     SLATicketSystem ticketSystem;
@@ -31,15 +32,31 @@ contract SLATicketSystemTest is Test {
         accessControl.grantRole(accessControl.BUYER_ROLE(), buyer);
         accessControl.grantRole(accessControl.SELLER_ROLE(), seller);
 
-        // Deploy SLATicketSystem
-        ticketSystem = new SLATicketSystem();
-        ticketSystem.initialize(address(creditsToken), address(accessControl), address(slaContract));
+        // Deploy SLATicketSystem implementation
+        SLATicketSystem ticketSystemImplementation = new SLATicketSystem();
 
-        // Transfer tokens to SLATicketSystem
+        // Encode the initializer call
+        bytes memory initializerData = abi.encodeWithSelector(
+        SLATicketSystem.initialize.selector,
+        address(creditsToken),
+        address(accessControl),
+        address(slaContract)
+        );
+
+        // Deploy the proxy
+        SLAUpgradeableProxy proxy = new SLAUpgradeableProxy(
+        address(ticketSystemImplementation),
+        admin, // This can be any address that is supposed to be the admin of the proxy
+        initializerData
+        );
+
+        // Interact with SLATicketSystem through the proxy
+        ticketSystem = SLATicketSystem(address(proxy));
+
+        // Transfer tokens to the proxy address
         uint256 amountToTransfer = 1e18 / 2; // Transfer half of the initial supply
         creditsToken.transfer(address(ticketSystem), amountToTransfer);
     }
-
 
     function testTicketSubmission() public {
         vm.prank(buyer);  // Set the next caller to be the buyer
