@@ -36,6 +36,7 @@ contract SLATicketSystem {
     /////////////////////////////////////////////////////////////////////////
 
     event TicketSubmitted(uint256 ticketId, address buyer);
+    event TicketValidated(uint256 ticketId, address seller);
 
     /////////////////////////////////////////////////////////////////////////
     // Constructor
@@ -75,5 +76,7 @@ contract SLATicketSystem {
         ticket.isValidated = true;
         ticket.sellerComments = comments;
         ticket.validationTimestamp = block.timestamp;
+
+        emit TicketValidated(ticketId, msg.sender);
     }
 }
