@@ -18,18 +18,25 @@ contract SLATicketSystemTest is Test {
     address seller;
 
     function setUp() public {
-        admin = address(this);  // Test contract is the admin
+        admin = address(this); // Test contract is the admin
         buyer = address(0x1);
         seller = address(0x2);
 
+        // Deploy contracts
         accessControl = new SLAAccessControl();
         slaContract = new SLAContract();
         creditsToken = new SLACreditsToken(1e18); // 1 token with 18 decimals
 
+        // Grant roles
         accessControl.grantRole(accessControl.BUYER_ROLE(), buyer);
         accessControl.grantRole(accessControl.SELLER_ROLE(), seller);
 
+        // Deploy SLATicketSystem
         ticketSystem = new SLATicketSystem(address(creditsToken), address(accessControl), address(slaContract));
+
+        // Transfer tokens to SLATicketSystem
+        uint256 amountToTransfer = 1e18 / 2; // Transfer half of the initial supply
+        creditsToken.transfer(address(ticketSystem), amountToTransfer);
     }
 
     function testTicketSubmission() public {
@@ -40,4 +47,18 @@ contract SLATicketSystemTest is Test {
         assertEq(serviceIdentifier, 1);
         assertEq(ticketBuyer, buyer);
     }
+
+    function testTicketValidation() public {
+        // Submit a ticket
+        vm.prank(buyer);
+        ticketSystem.submitTicket(1, "Issue Description", 1, false);
+
+        // Validate the ticket
+        vm.prank(seller);
+        ticketSystem.validateTicket(0, "Resolved");
+
+        (, , , , bool isValidated, , , , ) = ticketSystem.tickets(0);
+        assertTrue(isValidated);
+    }
+
 }
