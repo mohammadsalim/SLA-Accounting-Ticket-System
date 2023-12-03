@@ -32,12 +32,14 @@ contract SLATicketSystemTest is Test {
         accessControl.grantRole(accessControl.SELLER_ROLE(), seller);
 
         // Deploy SLATicketSystem
-        ticketSystem = new SLATicketSystem(address(creditsToken), address(accessControl), address(slaContract));
+        ticketSystem = new SLATicketSystem();
+        ticketSystem.initialize(address(creditsToken), address(accessControl), address(slaContract));
 
         // Transfer tokens to SLATicketSystem
         uint256 amountToTransfer = 1e18 / 2; // Transfer half of the initial supply
         creditsToken.transfer(address(ticketSystem), amountToTransfer);
     }
+
 
     function testTicketSubmission() public {
         vm.prank(buyer);  // Set the next caller to be the buyer

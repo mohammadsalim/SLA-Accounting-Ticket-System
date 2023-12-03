@@ -12,17 +12,32 @@ contract DeployScript is Script {
     function run() external {
         vm.startBroadcast();
 
-        // Deploy SLAAccessControl
+        // Deploy dependent contracts
         SLAAccessControl accessControl = new SLAAccessControl();
-
-        // Deploy SLAContract
         SLAContract slaContract = new SLAContract();
+        SLACreditsToken creditsToken = new SLACreditsToken(1e18);
 
-        // Deploy SLACreditsToken with initial supply
-        SLACreditsToken creditsToken = new SLACreditsToken(1e18); // 1 token with 18 decimals
+        // Deploy SLATicketSystem as implementation contract
+        SLATicketSystem implementation = new SLATicketSystem();
 
-        // Deploy SLATicketSystem
-        SLATicketSystem ticketSystem = new SLATicketSystem(address(creditsToken), address(accessControl), address(slaContract));
+        // Prepare initializer function call
+        bytes memory initData = abi.encodeWithSelector(
+            SLATicketSystem.initialize.selector,
+            address(creditsToken),
+            address(accessControl),
+            address(slaContract)
+        );
+
+        // Deploy the proxy
+        address admin = msg.sender;
+        SLAUpgradeableProxy proxy = new SLAUpgradeableProxy(
+            address(implementation),
+            admin,
+            initData
+        );
+
+        // Create an instance of SLATicketSystem pointing to the proxy
+        SLATicketSystem ticketSystem = SLATicketSystem(address(proxy));
 
         vm.stopBroadcast();
     }

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {Initializable} from "openzeppelin-contracts/proxy/utils/Initializable.sol";
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import "./SLAAccessControl.sol";
 import "./SLAContractInterface.sol";
 
-contract SLATicketSystem {
+contract SLATicketSystem is Initializable {
     SLAAccessControl accessControl;
     SLAContractInterface slaContract;
     IERC20 public creditToken;
@@ -77,10 +78,14 @@ contract SLATicketSystem {
     event CreditPayout(uint256 ticketId, address recipient, uint256 amount);
 
     /////////////////////////////////////////////////////////////////////////
-    // Constructor
+    // Initializer
     /////////////////////////////////////////////////////////////////////////
 
-    constructor(address _creditTokenAddress, address _accessControlAddress, address _slaContractAddress) {
+    function initialize(
+        address _creditTokenAddress, 
+        address _accessControlAddress, 
+        address _slaContractAddress
+    ) public initializer {
         creditToken = IERC20(_creditTokenAddress);
         accessControl = SLAAccessControl(_accessControlAddress);
         slaContract = SLAContractInterface(_slaContractAddress);
