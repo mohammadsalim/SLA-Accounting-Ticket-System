@@ -50,6 +50,7 @@ contract SLATicketSystem {
     // Functions
     /////////////////////////////////////////////////////////////////////////
 
+    // Function to submit a trouble ticket
     function submitTicket(uint256 serviceIdentifier, string memory issueDescription) external {
         uint256 ticketId = nextTicketId++;
         tickets[ticketId] = TroubleTicket({
@@ -63,5 +64,16 @@ contract SLATicketSystem {
         });
 
         emit TicketSubmitted(ticketId, msg.sender);
+    }
+
+    // Function for a seller to validate a ticket
+    function validateTicket(uint256 ticketId, string memory comments) external {
+        TroubleTicket storage ticket = tickets[ticketId];
+        require(ticket.buyer != address(0), "Ticket does not exist");
+        require(!ticket.isValidated, "Ticket already validated");
+
+        ticket.isValidated = true;
+        ticket.sellerComments = comments;
+        ticket.validationTimestamp = block.timestamp;
     }
 }
