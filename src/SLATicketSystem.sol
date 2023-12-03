@@ -31,6 +31,12 @@ contract SLATicketSystem {
         uint256 totalResolutionTime;
     }
 
+    // Struct to store history of payouts
+    struct PayoutHistory {
+        uint256 amount;
+        uint256 timestamp;
+    }
+
     /////////////////////////////////////////////////////////////////////////
     // State Variables
     /////////////////////////////////////////////////////////////////////////
@@ -44,6 +50,9 @@ contract SLATicketSystem {
 
     // Variable for performance metrics
     PerformanceMetrics public metrics;
+
+    // Mapping of payout history
+    mapping(uint256 => PayoutHistory) public payoutHistories;
 
     /////////////////////////////////////////////////////////////////////////
     // Events
@@ -122,7 +131,15 @@ contract SLATicketSystem {
         if (eligibleForCredit) {
             uint256 creditAmount = calculateCreditAmount(ticketId);
             creditToken.transfer(ticket.buyer, creditAmount);
+            recordPayoutHistory(ticketId, creditAmount);
         }
+    }
+
+    function recordPayoutHistory(uint256 ticketId, uint256 amount) internal {
+        payoutHistories[ticketId] = PayoutHistory({
+            amount: amount,
+            timestamp: block.timestamp
+        });
     }
 
     // Function to calculate credit amount
