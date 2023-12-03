@@ -53,6 +53,8 @@ contract SLATicketSystem {
 
     // Function to submit a trouble ticket
     function submitTicket(uint256 serviceIdentifier, string memory issueDescription) external {
+        require(accessControl.hasRole(accessControl.BUYER_ROLE(), msg.sender), "Not a buyer");
+
         uint256 ticketId = nextTicketId++;
         tickets[ticketId] = TroubleTicket({
             serviceIdentifier: serviceIdentifier,
@@ -69,6 +71,7 @@ contract SLATicketSystem {
 
     // Function for a seller to validate a ticket
     function validateTicket(uint256 ticketId, string memory comments) external {
+        require(accessControl.hasRole(accessControl.SELLER_ROLE(), msg.sender), "Not a seller");
         TroubleTicket storage ticket = tickets[ticketId];
         require(ticket.buyer != address(0), "Ticket does not exist");
         require(!ticket.isValidated, "Ticket already validated");
