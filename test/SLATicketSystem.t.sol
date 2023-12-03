@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 import "forge-std/Test.sol";
 import "../src/SLATicketSystem.sol";
 import "../src/SLAAccessControl.sol";
-import "../src/SLACreditsToken.sol";
-import "../src/SLAContract.sol";
+import "../src/Credits/SLACreditsToken.sol";
+import "../src/SLAs/SLAContract.sol";
 
 contract SLATicketSystemTest is Test {
     SLATicketSystem ticketSystem;
@@ -30,5 +30,14 @@ contract SLATicketSystemTest is Test {
         accessControl.grantRole(accessControl.SELLER_ROLE(), seller);
 
         ticketSystem = new SLATicketSystem(address(creditsToken), address(accessControl), address(slaContract));
+    }
+
+    function testTicketSubmission() public {
+        vm.prank(buyer);  // Set the next caller to be the buyer
+        ticketSystem.submitTicket(1, "Issue Description", 1, false);
+
+        (uint256 serviceIdentifier, , , address ticketBuyer, , , , , ) = ticketSystem.tickets(0);
+        assertEq(serviceIdentifier, 1);
+        assertEq(ticketBuyer, buyer);
     }
 }
