@@ -37,6 +37,7 @@ contract SLATicketSystem {
 
     event TicketSubmitted(uint256 ticketId, address buyer);
     event TicketValidated(uint256 ticketId, address seller);
+    event SLACheckPassed(uint256 ticketId, bool eligibleForCredit);
 
     /////////////////////////////////////////////////////////////////////////
     // Constructor
@@ -81,5 +82,21 @@ contract SLATicketSystem {
         ticket.validationTimestamp = block.timestamp;
 
         emit TicketValidated(ticketId, msg.sender);
+
+        automatedPayout(ticketId);
+    }
+
+    // Function for automated payout
+    function automatedPayout(uint256 ticketId) internal {
+        TroubleTicket storage ticket = tickets[ticketId];
+        require(ticket.isValidated, "Ticket not validated");
+
+        bool eligibleForCredit = slaContract.checkSLATerms(ticket.timestamp);
+
+        emit SLACheckPassed(ticketId, eligibleForCredit);
+
+        if (eligibleForCredit) {
+            // Logic for transferring credits to the buyer; token transfer or other form of credit
+        }
     }
 }
