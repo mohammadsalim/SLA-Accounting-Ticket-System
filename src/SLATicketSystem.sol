@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import "./SLAAccessControl.sol";
 import "./SLAContractInterface.sol";
 
 contract SLATicketSystem {
     SLAAccessControl accessControl;
     SLAContractInterface slaContract;
+    IERC20 public creditToken;
 
     /////////////////////////////////////////////////////////////////////////
     // Structs
@@ -59,7 +61,8 @@ contract SLATicketSystem {
     // Constructor
     /////////////////////////////////////////////////////////////////////////
 
-    constructor(address _accessControlAddress, address _slaContractAddress) {
+    constructor(address _creditTokenAddress, address _accessControlAddress, address _slaContractAddress) {
+        creditToken = IERC20(_creditTokenAddress);
         accessControl = SLAAccessControl(_accessControlAddress);
         slaContract = SLAContractInterface(_slaContractAddress);
     }
@@ -117,8 +120,15 @@ contract SLATicketSystem {
         emit SLACheckPassed(ticketId, eligibleForCredit);
 
         if (eligibleForCredit) {
-            // Logic for transferring credits to the buyer; token transfer or other form of credit
+            uint256 creditAmount = calculateCreditAmount(ticketId);
+            creditToken.transfer(ticket.buyer, creditAmount);
         }
+    }
+
+    // Function to calculate credit amount
+    function calculateCreditAmount(uint256 ticketId) internal view returns (uint256) {
+        // Logic to calculate the amount of credit for the ticket
+        return 50; // Placeholder value
     }
 
     // Function for buyers to raise a dispute 
