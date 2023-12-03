@@ -67,6 +67,7 @@ contract SLATicketSystem {
     event DisputeResolved(uint256 ticketId, address seller);
 
     event SLACheckPassed(uint256 ticketId, bool eligibleForCredit);
+    event CreditPayout(uint256 ticketId, address recipient, uint256 amount);
 
     /////////////////////////////////////////////////////////////////////////
     // Constructor
@@ -140,6 +141,8 @@ contract SLATicketSystem {
             uint256 creditAmount = calculateCreditAmount(ticketId);
             creditToken.transfer(ticket.buyer, creditAmount);
             recordPayoutHistory(ticketId, creditAmount);
+
+            emit CreditPayout(ticketId, ticket.buyer, creditAmount);
         }
     }
 
@@ -170,7 +173,6 @@ contract SLATicketSystem {
     
         return totalCredit > 0 ? totalCredit : 0;  // Ensure credit is not negative
     }
-
 
     // Function for buyers to raise a dispute 
     function raiseDispute(uint256 ticketId) external {
