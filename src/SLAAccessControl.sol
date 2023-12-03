@@ -20,4 +20,14 @@ contract SLAAccessControl is AccessControl {
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not an admin");
         _grantRole(BUYER_ROLE, account);
     }
+
+    function revokeSellerRole(address account) public {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not an admin");
+        _revokeRole(SELLER_ROLE, account);
+    }
+
+    function revokeBuyerRole(address account) public {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not an admin");
+        _revokeRole(BUYER_ROLE, account);
+    }
 }
