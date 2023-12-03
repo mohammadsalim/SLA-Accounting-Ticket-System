@@ -133,8 +133,7 @@ contract SLATicketSystem {
         TroubleTicket storage ticket = tickets[ticketId];
         require(ticket.isValidated, "Ticket not validated");
 
-        bool eligibleForCredit = slaContract.checkSLATerms(ticket.timestamp);
-
+        bool eligibleForCredit = slaContract.isCompliant(ticket.severity, ticket.timestamp, ticket.validationTimestamp);
         emit SLACheckPassed(ticketId, eligibleForCredit);
 
         if (eligibleForCredit) {
@@ -144,6 +143,7 @@ contract SLATicketSystem {
         }
     }
 
+    // Function to record payout history
     function recordPayoutHistory(uint256 ticketId, uint256 amount) internal {
         payoutHistories[ticketId] = PayoutHistory({
             amount: amount,

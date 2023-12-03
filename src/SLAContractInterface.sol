@@ -2,5 +2,5 @@
 pragma solidity ^0.8.0;
 
 interface SLAContractInterface {
-    function checkSLATerms(uint256 ticketTimestamp) external view returns (bool);
+    function isCompliant(uint256 severity, uint256 timestamp, uint256 validationTimestamp) external view returns (bool);
 }
