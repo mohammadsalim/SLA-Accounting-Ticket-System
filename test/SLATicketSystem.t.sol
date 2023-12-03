@@ -99,4 +99,25 @@ contract SLATicketSystemTest is Test {
 
         return totalCredit > 0 ? totalCredit : 0;  // Ensure credit is not negative
     }
+
+    function testDisputeResolution() public {
+        // Submit and validate a ticket
+        vm.prank(buyer);
+        ticketSystem.submitTicket(1, "Issue Description", 1, false);
+
+        vm.prank(seller);
+        ticketSystem.validateTicket(0, "Resolved");
+
+        // Raise a dispute
+        vm.prank(buyer);
+        ticketSystem.raiseDispute(0);
+        bool isDisputed = ticketSystem.disputes(0);
+        assertTrue(isDisputed);
+
+        // Resolve the dispute
+        vm.prank(seller);
+        ticketSystem.resolveDispute(0);
+        isDisputed = ticketSystem.disputes(0);
+        assertFalse(isDisputed);
+    }
 }
