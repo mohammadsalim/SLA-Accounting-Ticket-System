@@ -120,4 +120,18 @@ contract SLATicketSystemTest is Test {
         isDisputed = ticketSystem.disputes(0);
         assertFalse(isDisputed);
     }
+
+    function testPerformanceMetricsUpdate() public {
+        // Initial metrics should be zero
+        SLATicketSystem.PerformanceMetrics memory initialMetrics = ticketSystem.getPerformanceMetrics();
+        assertEq(initialMetrics.totalTicketsRaised, 0);
+
+        // Submit a ticket
+        vm.prank(buyer);
+        ticketSystem.submitTicket(1, "Issue Description", 1, false);
+
+        // Metrics should be updated
+        SLATicketSystem.PerformanceMetrics memory updatedMetrics = ticketSystem.getPerformanceMetrics();
+        assertEq(updatedMetrics.totalTicketsRaised, 1);
+    }
 }
