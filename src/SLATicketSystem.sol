@@ -29,9 +29,16 @@ contract SLATicketSystem {
 
     // Struct for performance metrics
     struct PerformanceMetrics {
+        uint256 totalTicketsRaised;
         uint256 totalResolvedTickets;
         uint256 totalResolutionTime;
+        uint256 totalDisputesRaised;
+        uint256 totalDisputesResolved;
+        uint256 totalDisputeResolutionTime;
+        uint256 averageResolutionTime;
+        uint256 averageDisputeResolutionTime;
     }
+
 
     // Struct to store history of payouts
     struct PayoutHistory {
@@ -61,7 +68,7 @@ contract SLATicketSystem {
     /////////////////////////////////////////////////////////////////////////
 
     event TicketSubmitted(uint256 ticketId, address buyer);
-    event TicketValidated(uint256 ticketId, address seller);
+    event TicketValidated(uint256 ticketId, address seller, bool slaCompliant);
 
     event DisputeRaised(uint256 ticketId, address buyer);
     event DisputeResolved(uint256 ticketId, address seller);
@@ -106,6 +113,9 @@ contract SLATicketSystem {
         });
 
         emit TicketSubmitted(ticketId, msg.sender);
+
+        // Update performance metrics
+        metrics.totalTicketsRaised++;
     }
 
     // Function for a seller to validate a ticket
@@ -119,7 +129,8 @@ contract SLATicketSystem {
         ticket.sellerComments = comments;
         ticket.validationTimestamp = block.timestamp;
 
-        emit TicketValidated(ticketId, msg.sender);
+        bool slaCompliant = slaContract.isCompliant(ticket.severity, ticket.timestamp, ticket.validationTimestamp);
+        emit TicketValidated(ticketId, msg.sender, slaCompliant);
 
         // Call automated payout
         automatedPayout(ticketId);
@@ -127,6 +138,7 @@ contract SLATicketSystem {
         // Update performance metrics
         metrics.totalResolvedTickets++;
         metrics.totalResolutionTime += (block.timestamp - tickets[ticketId].timestamp);
+        metrics.averageResolutionTime = metrics.totalResolvedTickets == 0 ? 0 : metrics.totalResolutionTime / metrics.totalResolvedTickets;
     }
 
     // Function for automated payout
@@ -181,6 +193,9 @@ contract SLATicketSystem {
 
         disputes[ticketId] = true;
         emit DisputeRaised(ticketId, msg.sender);
+
+        // Update performance metrics
+        metrics.totalDisputesRaised++;
     }
 
     // Function for sellers to resolve a dispute
@@ -190,10 +205,15 @@ contract SLATicketSystem {
 
         disputes[ticketId] = false;
         emit DisputeResolved(ticketId, msg.sender);
+
+        // Update performance metrics
+        metrics.totalDisputesResolved++;
+        metrics.totalDisputeResolutionTime += (block.timestamp - tickets[ticketId].timestamp);
+        metrics.averageDisputeResolutionTime = metrics.totalDisputesResolved == 0 ? 0 : metrics.totalDisputeResolutionTime / metrics.totalDisputesResolved;
     }
 
-    // Function to get average resolution time for performance metrics
-    function getAverageResolutionTime() external view returns (uint256) {
-        return metrics.totalResolvedTickets == 0 ? 0 : metrics.totalResolutionTime / metrics.totalResolvedTickets;
+    // Function to get performance metrics
+    function getPerformanceMetrics() external view returns (PerformanceMetrics memory) {
+        return metrics;
     }
 }
