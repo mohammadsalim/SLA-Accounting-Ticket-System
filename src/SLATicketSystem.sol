@@ -31,12 +31,19 @@ contract SLATicketSystem {
     mapping(uint256 => TroubleTicket) public tickets;
     uint256 public nextTicketId;
 
+    // Mapping of disputes
+    mapping(uint256 => bool) public disputes;
+
     /////////////////////////////////////////////////////////////////////////
     // Events
     /////////////////////////////////////////////////////////////////////////
 
     event TicketSubmitted(uint256 ticketId, address buyer);
     event TicketValidated(uint256 ticketId, address seller);
+
+    event DisputeRaised(uint256 ticketId, address buyer);
+    event DisputeResolved(uint256 ticketId, address seller);
+
     event SLACheckPassed(uint256 ticketId, bool eligibleForCredit);
 
     /////////////////////////////////////////////////////////////////////////
@@ -98,5 +105,23 @@ contract SLATicketSystem {
         if (eligibleForCredit) {
             // Logic for transferring credits to the buyer; token transfer or other form of credit
         }
+    }
+
+    // Function for buyers to raise a dispute 
+    function raiseDispute(uint256 ticketId) external {
+        require(tickets[ticketId].buyer == msg.sender, "Not the ticket buyer");
+        require(!disputes[ticketId], "Dispute already raised");
+
+        disputes[ticketId] = true;
+        emit DisputeRaised(ticketId, msg.sender);
+    }
+
+    // Function for sellers to resolve a dispute
+    function resolveDispute(uint256 ticketId) external {
+        require(accessControl.hasRole(accessControl.SELLER_ROLE(), msg.sender), "Not a seller");
+        require(disputes[ticketId], "No dispute raised");
+
+        disputes[ticketId] = false;
+        emit DisputeResolved(ticketId, msg.sender);
     }
 }
