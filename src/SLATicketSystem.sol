@@ -23,6 +23,12 @@ contract SLATicketSystem {
         uint256 validationTimestamp;
     }
 
+    // Struct for performance metrics
+    struct PerformanceMetrics {
+        uint256 totalResolvedTickets;
+        uint256 totalResolutionTime;
+    }
+
     /////////////////////////////////////////////////////////////////////////
     // State Variables
     /////////////////////////////////////////////////////////////////////////
