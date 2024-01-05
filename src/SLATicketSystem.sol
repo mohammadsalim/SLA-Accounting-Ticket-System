@@ -91,6 +91,7 @@ contract SLATicketSystem is Initializable {
     event TicketValidated(uint256 ticketId, address seller, bool slaCompliant);
 
     event DisputeRaised(uint256 ticketId, address buyer);
+    event ProposalSubmitted(uint256 ticketId, string proposal);
     event DisputeResolved(uint256 ticketId, address seller);
 
     event SLACheckPassed(uint256 ticketId, bool eligibleForCredit);
@@ -227,6 +228,15 @@ contract SLATicketSystem is Initializable {
         tickets[ticketId].dispute.disputeStatus = DisputeStatus.Raised;
         emit DisputeRaised(ticketId, msg.sender);
     }
+
+    function submitProposal(uint256 ticketId, string memory proposal) external {
+        require(accessControl.hasRole(accessControl.SELLER_ROLE(), msg.sender), "Not a seller");
+        require(tickets[ticketId].dispute.disputeStatus == DisputeStatus.Raised, "No dispute raised");
+        tickets[ticketId].dispute.sellerProposal = proposal;
+        tickets[ticketId].dispute.disputeStatus = DisputeStatus.ProposalMade;
+        emit ProposalSubmitted(ticketId, proposal);
+    }
+
 
     // Function for sellers to resolve a dispute
     function resolveDispute(uint256 ticketId) external {
