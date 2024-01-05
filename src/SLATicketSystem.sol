@@ -223,13 +223,9 @@ contract SLATicketSystem is Initializable {
     // Function for buyers to raise a dispute 
     function raiseDispute(uint256 ticketId) external {
         require(tickets[ticketId].details.buyer == msg.sender, "Not the ticket buyer");
-        require(!disputes[ticketId], "Dispute already raised");
-
-        disputes[ticketId] = true;
+        require(tickets[ticketId].dispute.disputeStatus == DisputeStatus.NoDispute, "Dispute already raised");
+        tickets[ticketId].dispute.disputeStatus = DisputeStatus.Raised;
         emit DisputeRaised(ticketId, msg.sender);
-
-        // Update performance metrics
-        metrics.totalDisputesRaised++;
     }
 
     // Function for sellers to resolve a dispute
