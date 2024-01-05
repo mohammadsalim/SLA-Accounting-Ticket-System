@@ -5,11 +5,13 @@ import {Initializable} from "openzeppelin-contracts/proxy/utils/Initializable.so
 import {IERC20} from "openzeppelin-contracts/token/ERC20/IERC20.sol";
 import "./SLAAccessControl.sol";
 import "./SLAContractInterface.sol";
+import "./DisputeTerms/IDisputeTerms.sol";
 
 contract SLATicketSystem is Initializable {
     SLAAccessControl accessControl;
     SLAContractInterface slaContract;
     IERC20 public creditToken;
+    IDisputeTerms public disputeTermsContract;
 
     /////////////////////////////////////////////////////////////////////////
     // Structs
@@ -31,7 +33,8 @@ contract SLATicketSystem is Initializable {
         string sellerComments;
         uint256 validationTimestamp;
         uint256 severity;  // Severity of the issue, e.g., 1 for low, 2 for medium, 3 for high
-        bool isPriorityCustomer;  // Indicates if the buyer is a priority customer
+        bool isPriorityCustomer;  // Indicates if the buyer is a priority customer,
+        address sellerAddress; // Address of the seller who validated the ticket
     }
 
     // Struct for the details of a trouble ticket dispute
@@ -92,6 +95,7 @@ contract SLATicketSystem is Initializable {
 
     event DisputeRaised(uint256 ticketId, address buyer);
     event ProposalSubmitted(uint256 ticketId, string proposal);
+    event DisputeEscalated(uint256 ticketId, uint256 newSeverity);
     event DisputeResolved(uint256 ticketId, address seller);
 
     event SLACheckPassed(uint256 ticketId, bool eligibleForCredit);
@@ -135,7 +139,8 @@ contract SLATicketSystem is Initializable {
                 sellerComments: "",
                 validationTimestamp: 0,
                 severity: severity,
-                isPriorityCustomer: isPriorityCustomer
+                isPriorityCustomer: isPriorityCustomer,
+                sellerAddress: address(0)
             }),
             dispute: TicketDispute({
                 disputeStatus: DisputeStatus.NoDispute,
@@ -160,6 +165,7 @@ contract SLATicketSystem is Initializable {
         ticket.details.isValidated = true;
         ticket.details.sellerComments = comments;
         ticket.details.validationTimestamp = block.timestamp;
+        ticket.details.sellerAddress = msg.sender;
 
         bool slaCompliant = slaContract.isCompliant(ticket.details.severity, ticket.details.timestamp, ticket.details.validationTimestamp);
         emit TicketValidated(ticketId, msg.sender, slaCompliant);
@@ -236,7 +242,6 @@ contract SLATicketSystem is Initializable {
         tickets[ticketId].dispute.disputeStatus = DisputeStatus.ProposalMade;
         emit ProposalSubmitted(ticketId, proposal);
     }
-
 
     // Function for sellers to resolve a dispute
     function resolveDispute(uint256 ticketId) external {
