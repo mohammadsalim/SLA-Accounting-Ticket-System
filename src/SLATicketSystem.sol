@@ -235,12 +235,30 @@ contract SLATicketSystem is Initializable {
         emit DisputeRaised(ticketId, msg.sender);
     }
 
+    // Function for seller to submit a proposal to a dispute
     function submitProposal(uint256 ticketId, string memory proposal) external {
         require(accessControl.hasRole(accessControl.SELLER_ROLE(), msg.sender), "Not a seller");
         require(tickets[ticketId].dispute.disputeStatus == DisputeStatus.Raised, "No dispute raised");
         tickets[ticketId].dispute.sellerProposal = proposal;
         tickets[ticketId].dispute.disputeStatus = DisputeStatus.ProposalMade;
         emit ProposalSubmitted(ticketId, proposal);
+    }
+
+    // Function for a buyer to accept a proposal or have it escalated
+    function respondToProposal(uint256 ticketId, bool accept) external {
+        require(tickets[ticketId].details.buyer == msg.sender, "Not the ticket buyer");
+        require(tickets[ticketId].dispute.disputeStatus == DisputeStatus.ProposalMade, "Proposal not made");
+
+        if (accept) {
+            tickets[ticketId].dispute.disputeStatus = DisputeStatus.Resolved;
+            // Will add logic to handle credits payout based on SLA terms here
+            emit DisputeResolved(ticketId, tickets[ticketId].details.sellerAddress);
+        } else {
+            // Escalate the dispute
+            tickets[ticketId].dispute.disputeSeverity = disputeTermsContract.getEscalatedSeverity(tickets[ticketId].dispute.disputeSeverity);
+            tickets[ticketId].dispute.disputeStatus = DisputeStatus.Raised;
+            emit DisputeEscalated(ticketId, tickets[ticketId].dispute.disputeSeverity);
+        }
     }
 
     // Function for sellers to resolve a dispute
