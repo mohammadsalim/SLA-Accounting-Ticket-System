@@ -17,6 +17,12 @@ contract SLATicketSystem is Initializable {
 
     // Struct for a submitted trouble ticket
     struct TroubleTicket {
+        TicketDetails details;
+        TicketDispute dispute;
+    }
+
+    // Struct for the trouble ticket details
+    struct TicketDetails {
         uint256 serviceIdentifier;
         string issueDescription;
         uint256 timestamp;
@@ -26,6 +32,13 @@ contract SLATicketSystem is Initializable {
         uint256 validationTimestamp;
         uint256 severity;  // Severity of the issue, e.g., 1 for low, 2 for medium, 3 for high
         bool isPriorityCustomer;  // Indicates if the buyer is a priority customer
+    }
+
+    // Struct for the details of a trouble ticket dispute
+    struct TicketDispute {
+        DisputeStatus disputeStatus;
+        string sellerProposal;
+        uint256 disputeSeverity;
     }
 
     // Struct for performance metrics
@@ -46,6 +59,12 @@ contract SLATicketSystem is Initializable {
         uint256 amount;
         uint256 timestamp;
     }
+
+    /////////////////////////////////////////////////////////////////////////
+    // Enums
+    /////////////////////////////////////////////////////////////////////////
+
+    enum DisputeStatus { NoDispute, Raised, ProposalMade, Resolved }
 
     /////////////////////////////////////////////////////////////////////////
     // State Variables
@@ -106,15 +125,22 @@ contract SLATicketSystem is Initializable {
 
         uint256 ticketId = nextTicketId++;
         tickets[ticketId] = TroubleTicket({
-            serviceIdentifier: serviceIdentifier,
-            issueDescription: issueDescription,
-            timestamp: block.timestamp,
-            buyer: msg.sender,
-            isValidated: false,
-            sellerComments: "",
-            validationTimestamp: 0,
-            severity: severity,
-            isPriorityCustomer: isPriorityCustomer
+            details: TicketDetails({
+                serviceIdentifier: serviceIdentifier,
+                issueDescription: issueDescription,
+                timestamp: block.timestamp,
+                buyer: msg.sender,
+                isValidated: false,
+                sellerComments: "",
+                validationTimestamp: 0,
+                severity: severity,
+                isPriorityCustomer: isPriorityCustomer
+            }),
+            dispute: TicketDispute({
+                disputeStatus: DisputeStatus.NoDispute,
+                sellerProposal: "",
+                disputeSeverity: 0
+            })
         });
 
         emit TicketSubmitted(ticketId, msg.sender);
@@ -127,14 +153,14 @@ contract SLATicketSystem is Initializable {
     function validateTicket(uint256 ticketId, string memory comments) external {
         require(accessControl.hasRole(accessControl.SELLER_ROLE(), msg.sender), "Not a seller");
         TroubleTicket storage ticket = tickets[ticketId];
-        require(ticket.buyer != address(0), "Ticket does not exist");
-        require(!ticket.isValidated, "Ticket already validated");
+        require(ticket.details.buyer != address(0), "Ticket does not exist");
+        require(!ticket.details.isValidated, "Ticket already validated");
 
-        ticket.isValidated = true;
-        ticket.sellerComments = comments;
-        ticket.validationTimestamp = block.timestamp;
+        ticket.details.isValidated = true;
+        ticket.details.sellerComments = comments;
+        ticket.details.validationTimestamp = block.timestamp;
 
-        bool slaCompliant = slaContract.isCompliant(ticket.severity, ticket.timestamp, ticket.validationTimestamp);
+        bool slaCompliant = slaContract.isCompliant(ticket.details.severity, ticket.details.timestamp, ticket.details.validationTimestamp);
         emit TicketValidated(ticketId, msg.sender, slaCompliant);
 
         // Call automated payout
@@ -142,24 +168,27 @@ contract SLATicketSystem is Initializable {
 
         // Update performance metrics
         metrics.totalResolvedTickets++;
-        metrics.totalResolutionTime += (block.timestamp - tickets[ticketId].timestamp);
+        metrics.totalResolutionTime += (block.timestamp - tickets[ticketId].details.timestamp);
         metrics.averageResolutionTime = metrics.totalResolvedTickets == 0 ? 0 : metrics.totalResolutionTime / metrics.totalResolvedTickets;
     }
 
     // Function for automated payout
     function automatedPayout(uint256 ticketId) internal {
         TroubleTicket storage ticket = tickets[ticketId];
-        require(ticket.isValidated, "Ticket not validated");
+        require(ticket.details.isValidated, "Ticket not validated");
 
-        bool eligibleForCredit = slaContract.isCompliant(ticket.severity, ticket.timestamp, ticket.validationTimestamp);
+        bool eligibleForCredit = slaContract.isCompliant(
+            ticket.details.severity, ticket.details.timestamp, ticket.details.validationTimestamp
+        );
+
         emit SLACheckPassed(ticketId, eligibleForCredit);
 
         if (eligibleForCredit) {
             uint256 creditAmount = calculateCreditAmount(ticketId);
-            creditToken.transfer(ticket.buyer, creditAmount);
+            creditToken.transfer(ticket.details.buyer, creditAmount);
             recordPayoutHistory(ticketId, creditAmount);
 
-            emit CreditPayout(ticketId, ticket.buyer, creditAmount);
+            emit CreditPayout(ticketId, ticket.details.buyer, creditAmount);
         }
     }
 
@@ -176,14 +205,14 @@ contract SLATicketSystem is Initializable {
         TroubleTicket storage ticket = tickets[ticketId];
 
         uint256 baseCredit = 10;  // Base credit amount
-        uint256 severityFactor = ticket.severity * 5;  // Additional credits for severity
-        uint256 timeFactor = (block.timestamp - ticket.timestamp) / 1 hours;  // Time factor in hours
+        uint256 severityFactor = ticket.details.severity * 5;  // Additional credits for severity
+        uint256 timeFactor = (block.timestamp - ticket.details.timestamp) / 1 hours;  // Time factor in hours
 
         // Reduce credits for delays (1 credit reduced per hour of delay)
         uint256 delayPenalty = timeFactor > 24 ? (timeFactor - 24) : 0;
 
         // Bonus credits for priority customers
-        uint256 priorityBonus = ticket.isPriorityCustomer ? 10 : 0;
+        uint256 priorityBonus = ticket.details.isPriorityCustomer ? 10 : 0;
 
         // Calculate total credit amount
         uint256 totalCredit = baseCredit + severityFactor + priorityBonus - delayPenalty;
@@ -193,7 +222,7 @@ contract SLATicketSystem is Initializable {
 
     // Function for buyers to raise a dispute 
     function raiseDispute(uint256 ticketId) external {
-        require(tickets[ticketId].buyer == msg.sender, "Not the ticket buyer");
+        require(tickets[ticketId].details.buyer == msg.sender, "Not the ticket buyer");
         require(!disputes[ticketId], "Dispute already raised");
 
         disputes[ticketId] = true;
@@ -213,7 +242,7 @@ contract SLATicketSystem is Initializable {
 
         // Update performance metrics
         metrics.totalDisputesResolved++;
-        metrics.totalDisputeResolutionTime += (block.timestamp - tickets[ticketId].timestamp);
+        metrics.totalDisputeResolutionTime += (block.timestamp - tickets[ticketId].details.timestamp);
         metrics.averageDisputeResolutionTime = metrics.totalDisputesResolved == 0 ? 0 : metrics.totalDisputeResolutionTime / metrics.totalDisputesResolved;
     }
 
